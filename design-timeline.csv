@@ -1,0 +1,13 @@
+Order,Name,Original,Stage,Status,Priority,Start week,End week,Depends on,Interview pillars,Ships
+1,Deterministic training engine,P1,Foundation,Not started,Must,1,4,,Domain modeling,Workout engine + history + progression rules
+2,Structured LLM outputs,P2,LLM app,Not started,Must,5,6,P1,Structured outputs,Validated WorkoutPlan schema + retries + prompt versions
+3,Tool-calling coach,P3,LLM app,Not started,Must,7,8,"P1, P2",Tool calling,Agent that queries real training data
+4,RAG knowledge base,P4,LLM app,Not started,Must,9,11,P2,RAG,pgvector retrieval over exercise science
+5,Exercise embeddings,P8,LLM app,Not started,Should,11,12,P4,RAG,Similarity search + equipment filters
+6,Evaluation suite,P5,Trust,Not started,Must,13,15,P2–P4,Evaluation,500 scenarios + constraint/hallucination metrics
+7,LLM-as-judge,P6,Trust,Not started,Must,16,17,P5,Evaluation,Semantic eval vs human labels
+8,Safety and guardrails,P12,Trust,Not started,Must,18,19,P5,Safety,Risk classifier + adversarial tests
+9,Observability,P10,Production,Not started,Must,6,20,P2,Observability,Traces + cost/latency/eval dashboards
+10,Recommendation / ML system,P7,Classical ML,Not started,Should,21,23,P1 + logged data,ML inference,XGBoost vs heuristics + progression model
+11,Model routing,P11,Production,Not started,Should,24,24,"P7, P10",Observability,Task-to-model router with quality/cost/latency
+12,Multi-agent system (optional),P9,Later,Later / skip,Nice,25,26,"P3, P11",Tool calling,Only if a real split of labor appears
