@@ -1,5 +1,7 @@
 # Personalized AI Training Platform
 
+Fun little personal project for myself where I learn  LLM application engineering, RAG, agents/tool use, evaluation, structured outputs, embeddings, ML pipelines while also creating an app I'd like to use to track my workouts. Will take 10 phases to complete.
+
 Phase 1: deterministic workout engine.
 Phase 2: structured LLM plans with validation, retries, and engine fallback.
 
