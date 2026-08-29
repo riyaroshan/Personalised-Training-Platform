@@ -30,3 +30,32 @@ Create a user, then either:
 
 - Exercise catalog, routine generator, logging, progression
 - Structured `WorkoutPlan` generation, prompt version `workout_plan.v1`, retries, fallback
+
+## Proposed Structure
+
+                 React Native
+                      │
+                      ▼
+                 API Gateway
+                      │
+              FastAPI / Python
+                      │
+       ┌──────────────┼───────────────┐
+       │              │               │
+       ▼              ▼               ▼
+ Workout Engine   AI Orchestrator   Analytics
+       │              │
+       │       ┌──────┼──────────┐
+       │       ▼      ▼          ▼
+       │      LLM   Retriever   Tools
+       │              │
+       │            pgvector
+       │
+       ▼
+   PostgreSQL
+       │
+       ▼
+Training / Feature Pipeline
+       │
+       ▼
+Prediction Model
