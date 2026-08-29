@@ -32,7 +32,7 @@ Create a user, then either:
 - Structured `WorkoutPlan` generation, prompt version `workout_plan.v1`, retries, fallback
 
 ## Proposed Structure
-
+```text
                  React Native
                       │
                       ▼
@@ -59,3 +59,4 @@ Training / Feature Pipeline
        │
        ▼
 Prediction Model
+```
