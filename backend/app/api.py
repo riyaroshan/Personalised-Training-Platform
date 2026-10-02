@@ -5,13 +5,19 @@ from app.ai.client import StructuredLLM, build_llm
 from app.ai.schemas import GenerationMeta
 from app.db import get_db
 from app.engine.catalog import CATALOG
-from app.engine.types import WorkoutPlan
+from app.engine.types import UserConstraints, WorkoutPlan
 from app.models import LoggedSet, User, Workout
+from app.rag.answer import RagAnswer, ablate, answer_question
+from app.rag.exercises import compare_substitutes, similar_exercises
+from app.rag.index import get_index
+from app.rag.retrieve import RetrieverConfig
 from app.schemas import (
     ExercisePublic,
     LoggedSetPublic,
     PlanResponse,
+    RagQuery,
     SetLogCreate,
+    SimilarQuery,
     SubstitutePublic,
     UserCreate,
     UserPublic,
@@ -249,3 +255,61 @@ def workout_history(user_id: str, db: Session = Depends(get_db)) -> list[Workout
         .all()
     )
     return [_workout_public(item) for item in workouts]
+
+
+@router.post("/rag/query", response_model=RagAnswer)
+def rag_query(payload: RagQuery) -> RagAnswer:
+    config = RetrieverConfig(
+        top_k=payload.top_k,
+        hybrid=payload.hybrid,
+        rerank=payload.rerank,
+        contextual=payload.contextual,
+        topic=payload.topic,
+        chunk_size=get_index().config.chunk_size,
+        overlap=get_index().config.overlap,
+    )
+    return answer_question(payload.question, config=config)
+
+
+@router.get("/rag/ablate")
+def rag_ablate(question: str = "Should I train chest twice or three times a week?") -> list[dict]:
+    return ablate(question)
+
+
+@router.post("/exercises/similar")
+def embedding_similar(payload: SimilarQuery) -> dict:
+    if payload.exercise_id not in CATALOG.by_id:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    constraints = UserConstraints(
+        days_per_week=3,
+        max_duration_minutes=45,
+        available_equipment=payload.available_equipment,
+        injuries=payload.injuries,
+    )
+    embeddings = similar_exercises(payload.exercise_id, constraints, limit=payload.limit)
+    return {
+        "exercise_id": payload.exercise_id,
+        "matches": [
+            {
+                "exercise_id": exercise.id,
+                "name": exercise.name,
+                "score": score,
+                "equipment": [item.value for item in exercise.equipment],
+                "substitution_group": exercise.substitution_group,
+            }
+            for exercise, score in embeddings
+        ],
+    }
+
+
+@router.post("/exercises/similar/compare")
+def compare_similar(payload: SimilarQuery) -> dict:
+    if payload.exercise_id not in CATALOG.by_id:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    constraints = UserConstraints(
+        days_per_week=3,
+        max_duration_minutes=45,
+        available_equipment=payload.available_equipment,
+        injuries=payload.injuries,
+    )
+    return compare_substitutes(payload.exercise_id, constraints, limit=payload.limit)

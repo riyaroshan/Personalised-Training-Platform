@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     llm_max_attempts: int = 3
     prompt_version: str = "workout_plan.v1"
+    embedding_provider: str = "hash"
+    embedding_dim: int = 96
+    rag_chunk_size: int = 80
+    rag_chunk_overlap: int = 16
+    rag_top_k: int = 4
 
 
 settings = Settings()

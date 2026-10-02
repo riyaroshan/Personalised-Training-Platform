@@ -101,3 +101,19 @@ class DayPreview(BaseModel):
     label: str
     estimated_minutes: int
     exercises: list[ExercisePrescription]
+
+
+class RagQuery(BaseModel):
+    question: str = Field(min_length=3, max_length=500)
+    top_k: int = Field(default=4, ge=1, le=10)
+    hybrid: bool = True
+    rerank: bool = True
+    contextual: bool = True
+    topic: str | None = None
+
+
+class SimilarQuery(BaseModel):
+    exercise_id: str
+    available_equipment: list[Equipment]
+    injuries: list[str] = Field(default_factory=list)
+    limit: int = Field(default=5, ge=1, le=10)

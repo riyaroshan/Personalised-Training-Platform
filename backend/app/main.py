@@ -12,6 +12,9 @@ from app.db import init_db
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    from app.rag.index import get_index
+
+    get_index()
     yield
 
 

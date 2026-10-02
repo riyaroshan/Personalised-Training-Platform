@@ -56,3 +56,30 @@ def test_create_user_and_generate_plan() -> None:
         },
     )
     assert logged.status_code == 200, logged.text
+
+
+def test_rag_query_cites_chunks() -> None:
+    response = client.post(
+        "/v1/rag/query",
+        json={"question": "Should I train chest twice or three times a week?"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["citations"]
+    assert any(item["document_id"] == "hypertrophy_frequency" for item in body["citations"])
+    assert "[hypertrophy_frequency]" in body["answer"]
+
+
+def test_similar_exercises_filter_equipment() -> None:
+    response = client.post(
+        "/v1/exercises/similar",
+        json={
+            "exercise_id": "cable_fly",
+            "available_equipment": ["dumbbell"],
+            "limit": 5,
+        },
+    )
+    assert response.status_code == 200, response.text
+    ids = [item["exercise_id"] for item in response.json()["matches"]]
+    assert "db_fly" in ids
+    assert "pec_deck" not in ids
