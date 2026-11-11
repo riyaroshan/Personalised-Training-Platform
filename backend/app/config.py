@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     llm_max_attempts: int = 3
     prompt_version: str = "workout_plan.v1"
+    agent_max_steps: int = 6
     embedding_provider: str = "hash"
     embedding_dim: int = 96
     rag_chunk_size: int = 80

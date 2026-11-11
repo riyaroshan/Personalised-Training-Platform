@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.engine.catalog import CATALOG
 from app.engine.generator import generate_plan
@@ -10,8 +10,10 @@ from app.engine.substitutions import find_substitutes
 from app.engine.types import Equipment, Goal, TrainingAge, UserConstraints, WorkoutPlan, WorkoutSetLog
 from app.engine.validate import validate_plan
 from app.models import LoggedSet, User, Workout
-from app.ai.client import StructuredLLM
+from app.ai.agent import CoachResult, ask_coach
+from app.ai.client import AgentLLM, StructuredLLM
 from app.ai.orchestrator import AIPlanResult, generate_ai_plan
+from app.ai.tools import ToolContext, WorkoutSnapshot
 
 
 def constraints_from_user(user: User) -> UserConstraints:
@@ -104,6 +106,54 @@ def start_workout(db: Session, user: User, day_index: int) -> Workout:
     db.commit()
     db.refresh(workout)
     return workout
+
+
+def tool_context_for_user(db: Session, user: User) -> ToolContext:
+    workouts = (
+        db.query(Workout)
+        .options(selectinload(Workout.sets))
+        .filter(Workout.user_id == user.id)
+        .order_by(Workout.started_at.desc())
+        .all()
+    )
+    snapshots = [
+        WorkoutSnapshot(
+            id=workout.id,
+            label=workout.label,
+            day_index=workout.day_index,
+            started_at=workout.started_at,
+            completed_at=workout.completed_at,
+            exercise_ids=list(dict.fromkeys(row.exercise_id for row in workout.sets)),
+            set_count=len(workout.sets),
+        )
+        for workout in workouts
+    ]
+    plan = WorkoutPlan.model_validate(user.current_plan) if user.current_plan else None
+    return ToolContext(
+        catalog=CATALOG,
+        constraints=constraints_from_user(user),
+        history=history_for_user(db, user.id),
+        workouts=snapshots,
+        current_plan=plan,
+        sessions_completed=user.sessions_completed,
+        now=datetime.now(UTC),
+    )
+
+
+def coach_for_user(
+    db: Session,
+    user: User,
+    message: str,
+    llm: AgentLLM | None = None,
+) -> CoachResult:
+    ctx = tool_context_for_user(db, user)
+    result = ask_coach(message, ctx, llm=llm)
+    if ctx.persist_plan and ctx.updated_plan is not None:
+        user.current_plan = ctx.updated_plan.model_dump(mode="json")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return result
 
 
 def complete_workout(db: Session, workout: Workout) -> Workout:

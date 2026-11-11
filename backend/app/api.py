@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, selectinload
 
-from app.ai.client import StructuredLLM, build_llm
+from app.ai.agent import CoachResult
+from app.ai.client import AgentLLM, StructuredLLM, build_agent_llm, build_llm
 from app.ai.schemas import GenerationMeta
 from app.db import get_db
 from app.engine.catalog import CATALOG
@@ -12,6 +13,7 @@ from app.rag.exercises import compare_substitutes, similar_exercises
 from app.rag.index import get_index
 from app.rag.retrieve import RetrieverConfig
 from app.schemas import (
+    CoachQuery,
     ExercisePublic,
     LoggedSetPublic,
     PlanResponse,
@@ -25,6 +27,7 @@ from app.schemas import (
     WorkoutStart,
 )
 from app.services import (
+    coach_for_user,
     complete_workout,
     generate_ai_and_store_plan,
     generate_and_store_plan,
@@ -38,6 +41,10 @@ router = APIRouter()
 
 def get_structured_llm() -> StructuredLLM | None:
     return build_llm()
+
+
+def get_agent_llm() -> AgentLLM | None:
+    return build_agent_llm()
 
 
 def _user_or_404(db: Session, user_id: str) -> User:
@@ -257,6 +264,17 @@ def workout_history(user_id: str, db: Session = Depends(get_db)) -> list[Workout
     return [_workout_public(item) for item in workouts]
 
 
+@router.post("/users/{user_id}/coach", response_model=CoachResult)
+def coach(
+    user_id: str,
+    payload: CoachQuery,
+    db: Session = Depends(get_db),
+    llm: AgentLLM | None = Depends(get_agent_llm),
+) -> CoachResult:
+    user = _user_or_404(db, user_id)
+    return coach_for_user(db, user, payload.message, llm=llm)
+
+
 @router.post("/rag/query", response_model=RagAnswer)
 def rag_query(payload: RagQuery) -> RagAnswer:
     config = RetrieverConfig(
@@ -300,6 +318,20 @@ def embedding_similar(payload: SimilarQuery) -> dict:
             for exercise, score in embeddings
         ],
     }
+
+
+@router.get("/eval/scorecard")
+def eval_scorecard(include_naive: bool = True) -> dict:
+    from app.eval.runner import public_scorecard, run_suite
+
+    return public_scorecard(run_suite(include_naive=include_naive, index=get_index()))
+
+
+@router.get("/eval/retrievers")
+def eval_retrievers() -> dict:
+    from app.eval.runner import compare_retrievers, public_scorecard
+
+    return {name: public_scorecard(card) for name, card in compare_retrievers(get_index()).items()}
 
 
 @router.post("/exercises/similar/compare")

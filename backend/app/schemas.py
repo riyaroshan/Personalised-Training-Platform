@@ -112,6 +112,10 @@ class RagQuery(BaseModel):
     topic: str | None = None
 
 
+class CoachQuery(BaseModel):
+    message: str = Field(min_length=3, max_length=1000)
+
+
 class SimilarQuery(BaseModel):
     exercise_id: str
     available_equipment: list[Equipment]

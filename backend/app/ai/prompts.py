@@ -7,6 +7,7 @@ from app.engine.types import UserConstraints, WorkoutSetLog
 
 
 CURRENT_WORKOUT_PLAN_PROMPT = "workout_plan.v1"
+CURRENT_COACH_PROMPT = "coach_tools.v1"
 
 
 @dataclass(frozen=True)
@@ -34,7 +35,20 @@ PROMPTS: dict[str, PromptVersion] = {
             "- reasoning should cite constraints, not generic motivation.\n"
             "If a previous attempt is attached, it failed validation — fix every listed error."
         ),
-    )
+    ),
+    "coach_tools.v1": PromptVersion(
+        id="coach_tools.v1",
+        task="coach",
+        system=(
+            "You are a strength coach that looks up this athlete's training log with tools. "
+            "Never invent sets, loads, PRs, or recovery scores. "
+            "You MUST call tools before answering questions about progress, volume, recovery, or substitutions. "
+            "Operational data lives in tools, not in your weights. "
+            "After tools return, answer as JSON: "
+            '{"answer": "...", "evidence": ["short facts copied from tool results"]}. '
+            "If the tools show a stall or drop, say so. Do not give a pep talk."
+        ),
+    ),
 }
 
 
